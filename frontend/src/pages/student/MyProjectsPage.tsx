@@ -195,7 +195,7 @@ const MyProjectsPage: React.FC = () => {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-medium text-slate-300">Thumbnail URL (optional)</label>
+              <label className="block text-[11px] font-medium text-slate-300">Logo Image</label>
               <input
                 name="thumbnailFile"
                 type="file"
