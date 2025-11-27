@@ -3,6 +3,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { authenticate } from '../middleware/auth.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -33,16 +34,31 @@ const upload = multer({
   },
 });
 
-router.post('/thumbnail', authenticate, upload.single('file'), (req, res) => {
+router.post('/thumbnail', authenticate, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
-  const file = req.file;
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const url = `${baseUrl}/uploads/${file.filename}`;
+  try {
+    const file = req.file;
 
-  res.status(201).json({ url });
+    const uploadResult = await cloudinary.uploader.upload(file.path, {
+      folder: 'bscs3b-thumbnails',
+      resource_type: 'image',
+    });
+
+    // Optionally clean up local file (best-effort)
+    try {
+      fs.unlink(file.path, () => {});
+    } catch (cleanupErr) {
+      console.warn('Failed to remove temporary upload file:', cleanupErr);
+    }
+
+    return res.status(201).json({ url: uploadResult.secure_url });
+  } catch (error) {
+    console.error('Cloudinary upload failed:', error);
+    return res.status(500).json({ message: 'Failed to upload image' });
+  }
 });
 
 export default router;
