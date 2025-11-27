@@ -54,7 +54,8 @@ router.post('/thumbnail', authenticate, upload.single('file'), async (req, res) 
       console.warn('Failed to remove temporary upload file:', cleanupErr);
     }
 
-    return res.status(201).json({ url: uploadResult.secure_url });
+    // Always return the Cloudinary secure URL so the frontend can store it permanently.
+    return res.status(201).json({ url: uploadResult.secure_url, provider: 'cloudinary' });
   } catch (error) {
     console.error('Cloudinary upload failed:', error);
     return res.status(500).json({ message: 'Failed to upload image' });
