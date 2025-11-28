@@ -45,6 +45,12 @@ const StudentNotificationsPage: React.FC = () => {
         </p>
       </div>
 
+      {!loading && projects.some((project) => project.status === 'approved') && (
+        <div className="rounded-xl border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-[11px] md:text-xs text-emerald-300">
+          Your project has been approved for the compilation.
+        </div>
+      )}
+
       {loading ? (
         <p className="text-xs text-slate-400">Loading notifications...</p>
       ) : projects.length === 0 ? (

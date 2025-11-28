@@ -7,6 +7,7 @@ const projectSchema = new mongoose.Schema(
     description: { type: String, required: true, trim: true },
     category: { type: String, trim: true },
     thumbnailUrl: { type: String, trim: true },
+    posterUrl: { type: String, trim: true },
     deployedUrl: { type: String, required: true, trim: true },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     feedback: { type: String, trim: true },

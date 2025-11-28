@@ -5,6 +5,7 @@ import {
   getStudents,
   updateStudentStatus,
   deleteStudent,
+  resetStudentPassword,
   getAllProjects,
   updateProjectStatus,
   updateProjectByAdmin,
@@ -19,6 +20,7 @@ router.get('/stats', getStats);
 router.get('/students', getStudents);
 router.patch('/students/:id/status', updateStudentStatus);
 router.delete('/students/:id', deleteStudent);
+router.post('/students/:id/reset-password', resetStudentPassword);
 
 router.get('/projects', getAllProjects);
 router.patch('/projects/:id/status', updateProjectStatus);

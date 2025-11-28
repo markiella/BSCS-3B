@@ -9,6 +9,7 @@ interface MyProject {
   description: string;
   category?: string;
   thumbnailUrl?: string;
+  posterUrl?: string;
   deployedUrl: string;
   status: 'pending' | 'approved' | 'rejected';
   feedback?: string;
@@ -19,6 +20,7 @@ const emptyForm: Omit<MyProject, '_id' | 'status'> = {
   description: '',
   category: '',
   thumbnailUrl: '',
+  posterUrl: '',
   deployedUrl: '',
 };
 
@@ -29,7 +31,9 @@ const MyProjectsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [posterFile, setPosterFile] = useState<File | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -56,6 +60,7 @@ const MyProjectsPage: React.FC = () => {
     setEditingId(null);
     setForm(emptyForm);
     setThumbnailFile(null);
+    setPosterFile(null);
   };
 
   const startEdit = (project: MyProject) => {
@@ -65,14 +70,18 @@ const MyProjectsPage: React.FC = () => {
       description: project.description,
       category: project.category || '',
       thumbnailUrl: project.thumbnailUrl || '',
+      posterUrl: project.posterUrl || '',
       deployedUrl: project.deployedUrl,
     });
     setThumbnailFile(null);
+    setPosterFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
+    const isEditing = !!editingId;
     setSaving(true);
     try {
       const payload: typeof form = { ...form };
@@ -88,6 +97,17 @@ const MyProjectsPage: React.FC = () => {
         payload.thumbnailUrl = data.url;
       }
 
+      if (posterFile) {
+        const posterData = new FormData();
+        posterData.append('file', posterFile);
+
+        const { data: posterRes } = await api.post<{ url: string }>('/uploads/thumbnail', posterData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        (payload as any).posterUrl = posterRes.url;
+      }
+
       if (editingId) {
         await api.patch(`/projects/${editingId}`, payload);
       } else {
@@ -97,6 +117,8 @@ const MyProjectsPage: React.FC = () => {
       setEditingId(null);
       setForm(emptyForm);
       setThumbnailFile(null);
+      setPosterFile(null);
+      setSuccess(isEditing ? 'Project updated successfully.' : 'Project submitted successfully.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Unable to save project';
       setError(msg);
@@ -110,6 +132,7 @@ const MyProjectsPage: React.FC = () => {
     try {
       await api.delete(`/projects/${id}`);
       await load();
+      setSuccess('Project deleted successfully.');
     } catch (err) {
       console.error(err);
     }
@@ -152,14 +175,18 @@ const MyProjectsPage: React.FC = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-medium text-slate-300">Category (optional)</label>
+              <label className="block text-[11px] font-medium text-slate-300">Poster Image</label>
               <input
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                className="w-full px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/80 text-sm text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-royal focus:border-royal"
-                placeholder="Landing page, Dashboard, etc."
+                name="posterFile"
+                type="file"
+                accept="image/*"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0] || null;
+                  setPosterFile(file);
+                }}
+                className="w-full text-[11px] text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-100 hover:file:bg-slate-700"
               />
+              <p className="text-[10px] text-slate-500">Optional large poster that appears in the author details.</p>
             </div>
           </div>
 
@@ -216,6 +243,11 @@ const MyProjectsPage: React.FC = () => {
           {error && (
             <div className="text-[11px] text-rose-400 bg-rose-950/40 border border-rose-900/50 rounded-xl px-3 py-2">
               {error}
+            </div>
+          )}
+          {success && !error && (
+            <div className="text-[11px] text-emerald-300 bg-emerald-950/40 border border-emerald-800/60 rounded-xl px-3 py-2">
+              {success}
             </div>
           )}
 

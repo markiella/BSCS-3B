@@ -2,7 +2,7 @@ import { Project } from '../models/Project.js';
 
 export const createProject = async (req, res, next) => {
   try {
-    const { title, description, category, thumbnailUrl, deployedUrl } = req.body;
+    const { title, description, category, thumbnailUrl, posterUrl, deployedUrl } = req.body;
 
     if (!title || !description || !deployedUrl) {
       return res.status(400).json({ message: 'Title, description, and deployed URL are required' });
@@ -14,6 +14,7 @@ export const createProject = async (req, res, next) => {
       description,
       category,
       thumbnailUrl,
+      posterUrl,
       deployedUrl,
       status: 'pending',
     });
@@ -46,7 +47,7 @@ export const updateMyProject = async (req, res, next) => {
       return res.status(403).json({ message: 'You can only edit your own project' });
     }
 
-    const updatableFields = ['title', 'description', 'category', 'thumbnailUrl', 'deployedUrl'];
+    const updatableFields = ['title', 'description', 'category', 'thumbnailUrl', 'posterUrl', 'deployedUrl'];
 
     updatableFields.forEach((field) => {
       if (req.body[field] !== undefined) {
@@ -85,7 +86,10 @@ export const getApprovedProjects = async (req, res, next) => {
   try {
     const projects = await Project.find({ status: 'approved' })
       .sort({ created_at: -1 })
-      .populate('user', 'fullName');
+      .populate(
+        'user',
+        'fullName contactNumber address birthday profileImageUrl facebookUrl instagramUrl githubUrl'
+      );
 
     res.json(projects);
   } catch (err) {

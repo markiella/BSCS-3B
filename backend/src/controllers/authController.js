@@ -37,8 +37,52 @@ export const register = async (req, res, next) => {
         email: user.email,
         role: user.role,
         status: user.status,
+        contactNumber: user.contactNumber,
+        address: user.address,
+        birthday: user.birthday,
+        profileImageUrl: user.profileImageUrl,
+        facebookUrl: user.facebookUrl,
+        instagramUrl: user.instagramUrl,
+        githubUrl: user.githubUrl,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(400).json({ message: 'Only students can change password via this endpoint' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.json({ message: 'Password updated successfully' });
   } catch (err) {
     next(err);
   }
@@ -100,6 +144,13 @@ export const login = async (req, res, next) => {
         email: user.email,
         role: user.role,
         status: user.status,
+        contactNumber: user.contactNumber,
+        address: user.address,
+        birthday: user.birthday,
+        profileImageUrl: user.profileImageUrl,
+        facebookUrl: user.facebookUrl,
+        instagramUrl: user.instagramUrl,
+        githubUrl: user.githubUrl,
       },
     });
   } catch (err) {
@@ -125,6 +176,55 @@ export const me = async (req, res, next) => {
     }
 
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    if (req.user.role === 'admin') {
+      return res.status(400).json({ message: 'Admin profile cannot be updated via this endpoint' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updatableFields = [
+      'fullName',
+      'contactNumber',
+      'address',
+      'birthday',
+      'profileImageUrl',
+      'facebookUrl',
+      'instagramUrl',
+      'githubUrl',
+    ];
+
+    updatableFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        user[field] = req.body[field];
+      }
+    });
+
+    await user.save();
+
+    return res.json({
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      contactNumber: user.contactNumber,
+      address: user.address,
+      birthday: user.birthday,
+      profileImageUrl: user.profileImageUrl,
+      facebookUrl: user.facebookUrl,
+      instagramUrl: user.instagramUrl,
+      githubUrl: user.githubUrl,
+    });
   } catch (err) {
     next(err);
   }

@@ -29,6 +29,7 @@ const AdminApprovalsPage: React.FC = () => {
   const [filter, setFilter] = useState<StatusFilter>('pending');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,6 +89,7 @@ const AdminApprovalsPage: React.FC = () => {
 
     setUpdatingId(submissionId);
     setError(null);
+    setSuccess(null);
     try {
       const { data } = await api.patch<AdminProject>(`/admin/projects/${submissionId}/status`, {
         status,
@@ -95,6 +97,7 @@ const AdminApprovalsPage: React.FC = () => {
       });
 
       setProjects((prev) => prev.map((p) => (p._id === submissionId ? data : p)));
+      setSuccess(status === 'approved' ? 'Project approved successfully.' : 'Project marked for revisions.');
     } catch (err: any) {
       console.error(err);
       const msg = err?.response?.data?.message || 'Failed to update project status';
@@ -142,6 +145,11 @@ const AdminApprovalsPage: React.FC = () => {
       {error && (
         <div className="rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-2 text-xs text-rose-300">
           {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-xl border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
+          {success}
         </div>
       )}
 

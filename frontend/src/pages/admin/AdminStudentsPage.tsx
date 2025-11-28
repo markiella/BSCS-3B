@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Search, Filter } from 'lucide-react';
+import { Users, Search, Filter, KeyRound } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface StudentSummary {
@@ -28,11 +28,13 @@ const AdminStudentsPage: React.FC = () => {
   const [sectionFilter, setSectionFilter] = useState<'all' | 'BSCS 3B'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setResetMessage(null);
       try {
         const { data } = await api.get<StudentSummary[]>('/admin/students');
 
@@ -86,6 +88,35 @@ const AdminStudentsPage: React.FC = () => {
     );
   }, [filteredStudents]);
 
+  const handleResetPassword = async (student: StudentSummary) => {
+    if (
+      !window.confirm(
+        `Reset password for ${student.name || student.email}? This will generate a new temporary password and overwrite the old one.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setResetMessage(null);
+
+      const { data } = await api.post<{
+        id: string;
+        fullName: string;
+        email: string;
+        temporaryPassword: string;
+      }>(`/admin/students/${student.id}/reset-password`);
+
+      setResetMessage(
+        `Temporary password for ${data.email} is "${data.temporaryPassword}". Please send this to the student and ask them to log in and change it.`,
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to reset password';
+      setError(msg);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -132,6 +163,11 @@ const AdminStudentsPage: React.FC = () => {
       {error && (
         <div className="rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-2 text-xs text-rose-300">
           {error}
+        </div>
+      )}
+      {resetMessage && !error && (
+        <div className="rounded-xl border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-[11px] md:text-xs text-emerald-300">
+          {resetMessage}
         </div>
       )}
 
@@ -189,6 +225,13 @@ const AdminStudentsPage: React.FC = () => {
                 <span className="rounded-full bg-rose-500/10 px-2 py-1 text-rose-300">
                   {student.rejected} rejected
                 </span>
+                <button
+                  type="button"
+                  onClick={() => handleResetPassword(student)}
+                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-1 text-[11px] text-slate-200 ring-1 ring-inset ring-slate-700/80 hover:bg-slate-800 hover:text-emerald-300 hover:ring-emerald-500/60"
+                >
+                  <KeyRound className="h-3 w-3" /> Reset password
+                </button>
               </div>
             </motion.div>
           ))}

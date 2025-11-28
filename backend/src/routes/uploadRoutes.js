@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
       return cb(new Error('Only image uploads are allowed'));
@@ -58,7 +58,8 @@ router.post('/thumbnail', authenticate, upload.single('file'), async (req, res) 
     return res.status(201).json({ url: uploadResult.secure_url, provider: 'cloudinary' });
   } catch (error) {
     console.error('Cloudinary upload failed:', error);
-    return res.status(500).json({ message: 'Failed to upload image' });
+    const message = error && error.message ? error.message : 'Failed to upload image';
+    return res.status(500).json({ message });
   }
 });
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, LayoutGrid, LogOut, Megaphone, UserCircle2 } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, LogOut, Megaphone, User, UserCircle2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 
 const StudentDashboardLayout: React.FC = () => {
@@ -51,6 +51,16 @@ const StudentDashboardLayout: React.FC = () => {
             }
           >
             <Megaphone className="h-4 w-4" /> Notifications
+          </NavLink>
+          <NavLink
+            to="/dashboard/profile"
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors ${
+                isActive ? 'bg-royal text-white' : 'text-slate-300 hover:bg-slate-900/80 hover:text-slate-50'
+              }`
+            }
+          >
+            <User className="h-4 w-4" /> Profile
           </NavLink>
         </nav>
         <div className="px-4 py-4 border-t border-slate-800/80 text-[11px] flex items-center justify-between gap-2">

@@ -8,6 +8,7 @@ import StudentDashboardLayout from './pages/student/StudentDashboardLayout';
 import StudentHome from './pages/student/StudentHome';
 import MyProjectsPage from './pages/student/MyProjectsPage';
 import StudentNotificationsPage from './pages/student/StudentNotificationsPage';
+import StudentProfilePage from './pages/student/StudentProfilePage';
 import AdminDashboardLayout from './pages/admin/AdminDashboardLayout';
 import AdminOverview from './pages/admin/AdminOverview';
 import AdminApprovalsPage from './pages/admin/AdminApprovalsPage';
@@ -27,6 +28,7 @@ const App: React.FC = () => {
             <Route index element={<StudentHome />} />
             <Route path="my-project" element={<MyProjectsPage />} />
             <Route path="notifications" element={<StudentNotificationsPage />} />
+            <Route path="profile" element={<StudentProfilePage />} />
           </Route>
         </Route>
 

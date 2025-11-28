@@ -10,6 +10,13 @@ export interface AuthUser {
   email: string;
   role: Role;
   status: 'active' | 'deactivated';
+  contactNumber?: string;
+  address?: string;
+  birthday?: string;
+  profileImageUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  githubUrl?: string;
 }
 
 interface AuthContextValue {
@@ -19,6 +26,17 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (updates: {
+    fullName?: string;
+    contactNumber?: string;
+    address?: string;
+    birthday?: string | null;
+    profileImageUrl?: string | null;
+    facebookUrl?: string | null;
+    instagramUrl?: string | null;
+    githubUrl?: string | null;
+  }) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -77,8 +95,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/', { replace: true });
   };
 
+  const updateProfile = async (updates: {
+    fullName?: string;
+    contactNumber?: string;
+    address?: string;
+    birthday?: string | null;
+    profileImageUrl?: string | null;
+    facebookUrl?: string | null;
+    instagramUrl?: string | null;
+    githubUrl?: string | null;
+  }) => {
+    const body: any = { ...updates };
+    if (!body.birthday) {
+      delete body.birthday;
+    }
+
+    const { data } = await api.patch('/auth/me', body);
+
+    const nextUser: AuthUser = {
+      id: data.id,
+      fullName: data.fullName,
+      email: data.email,
+      role: data.role,
+      status: data.status,
+      contactNumber: data.contactNumber,
+      address: data.address,
+      birthday: data.birthday ?? undefined,
+      profileImageUrl: data.profileImageUrl ?? undefined,
+      facebookUrl: data.facebookUrl ?? undefined,
+      instagramUrl: data.instagramUrl ?? undefined,
+      githubUrl: data.githubUrl ?? undefined,
+    };
+
+    persist(nextUser, token);
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    await api.post('/auth/password', { currentPassword, newPassword });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

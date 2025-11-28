@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import { Project } from '../models/Project.js';
 
@@ -133,6 +134,33 @@ export const deleteStudent = async (req, res, next) => {
     await user.deleteOne();
 
     res.json({ message: 'Student and related projects deleted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetStudentPassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+
+    if (!user || user.role !== 'student') {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const tempPassword = `bscs-${Math.random().toString(36).slice(-8)}`;
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    user.passwordHash = passwordHash;
+    await user.save();
+
+    return res.json({
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      temporaryPassword: tempPassword,
+    });
   } catch (err) {
     next(err);
   }
