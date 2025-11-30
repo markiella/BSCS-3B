@@ -38,6 +38,39 @@ const StudentHome: React.FC = () => {
     return { total, approved, pending, rejected };
   }, [projects]);
 
+  const upcomingBirthday = useMemo(() => {
+    const birthdayStr = user?.birthday;
+    if (!birthdayStr) return null;
+
+    const parsed = new Date(birthdayStr);
+    if (Number.isNaN(parsed.getTime())) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+
+    const month = parsed.getMonth();
+    const day = parsed.getDate();
+    if (Number.isNaN(month) || Number.isNaN(day)) return null;
+
+    let nextBirthday = new Date(currentYear, month, day);
+    if (nextBirthday < today) {
+      nextBirthday = new Date(currentYear + 1, month, day);
+    }
+
+    const diffMs = nextBirthday.getTime() - today.getTime();
+    const daysRemaining = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (daysRemaining < 0 || daysRemaining > 7) return null;
+
+    const dateLabel = nextBirthday.toLocaleDateString(undefined, {
+      month: 'long',
+      day: 'numeric',
+    });
+
+    return { dateLabel, daysRemaining };
+  }, [user?.birthday]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -47,6 +80,24 @@ const StudentHome: React.FC = () => {
           instructor, your work will be featured on the public landing page.
         </p>
       </div>
+
+      {upcomingBirthday && (
+        <div className="rounded-2xl bg-gradient-to-r from-royal/40 via-emerald-500/15 to-slate-900 border border-royal/60 px-4 py-3 text-xs md:text-sm text-slate-50 flex flex-col gap-1">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-200">Upcoming birthday</p>
+          <p className="text-sm md:text-base font-semibold">
+            {upcomingBirthday.daysRemaining === 0
+              ? 'Happy birthday! Wishing you an amazing year ahead.'
+              : `Your birthday is coming up on ${upcomingBirthday.dateLabel}.`}
+          </p>
+          {upcomingBirthday.daysRemaining > 0 && (
+            <p className="text-[11px] text-slate-200/80">
+              {upcomingBirthday.daysRemaining === 1
+                ? 'In 1 day.'
+                : `In ${upcomingBirthday.daysRemaining} days.`}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <motion.div

@@ -34,6 +34,9 @@ const MyProjectsPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteTitle, setPendingDeleteTitle] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -127,14 +130,27 @@ const MyProjectsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this project? This cannot be undone.')) return;
+  const openDeleteModal = (project: MyProject) => {
+    setPendingDeleteId(project._id);
+    setPendingDeleteTitle(project.title);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    setDeleting(true);
     try {
-      await api.delete(`/projects/${id}`);
+      setError(null);
+      setSuccess(null);
+      await api.delete(`/projects/${pendingDeleteId}`);
       await load();
       setSuccess('Project deleted successfully.');
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Unable to delete project';
+      setError(msg);
+    } finally {
+      setDeleting(false);
+      setPendingDeleteId(null);
+      setPendingDeleteTitle(null);
     }
   };
 
@@ -315,7 +331,7 @@ const MyProjectsPage: React.FC = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(project._id)}
+                        onClick={() => openDeleteModal(project)}
                         className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-rose-300"
                       >
                         <Trash2 className="h-3 w-3" /> Delete
@@ -328,6 +344,41 @@ const MyProjectsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {pendingDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-950/95 shadow-xl p-4 space-y-3 text-xs md:text-sm">
+            <p className="text-sm font-semibold text-slate-50">Delete project</p>
+            <p className="text-slate-400 text-xs md:text-sm">
+              Are you sure you want to delete
+              <span className="font-medium text-slate-100"> {pendingDeleteTitle || 'this project'}</span>? This
+              action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => {
+                  if (deleting) return;
+                  setPendingDeleteId(null);
+                  setPendingDeleteTitle(null);
+                }}
+                className="px-3 py-1.5 rounded-full text-xs md:text-sm text-slate-200 border border-slate-700/80 hover:bg-slate-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-full text-xs md:text-sm bg-rose-600 text-white hover:bg-rose-500 disabled:opacity-60"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

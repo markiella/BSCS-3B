@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -35,12 +35,73 @@ interface LandingProject {
   };
 }
 
+interface UpcomingBirthday {
+  name: string;
+  birthdayLabel: string;
+  daysRemaining: number;
+}
+
 const LandingPage: React.FC = () => {
   const [projects, setProjects] = useState<LandingProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<LandingProject | null>(null);
   const [imagePreview, setImagePreview] = useState<{ url: string; alt: string } | null>(null);
   const [query, setQuery] = useState('');
+
+  const upcomingBirthdays = useMemo<UpcomingBirthday[]>(() => {
+    if (!projects.length) return [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+
+    const seen = new Map<string, { name: string; birthday: string }>();
+
+    projects.forEach((project) => {
+      const student = project.user;
+      if (!student?.fullName || !student.birthday) return;
+      const key = `${student.fullName}|${student.birthday}`;
+      if (!seen.has(key)) {
+        seen.set(key, { name: student.fullName, birthday: student.birthday });
+      }
+    });
+
+    const result: UpcomingBirthday[] = [];
+
+    seen.forEach(({ name, birthday }) => {
+      const parsed = new Date(birthday);
+      if (Number.isNaN(parsed.getTime())) return;
+
+      const month = parsed.getMonth();
+      const day = parsed.getDate();
+      if (Number.isNaN(month) || Number.isNaN(day)) return;
+
+      let nextBirthday = new Date(currentYear, month, day);
+      if (nextBirthday < today) {
+        nextBirthday = new Date(currentYear + 1, month, day);
+      }
+
+      const diffMs = nextBirthday.getTime() - today.getTime();
+      const daysRemaining = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+      if (daysRemaining >= 0 && daysRemaining <= 7) {
+        const birthdayLabel = nextBirthday.toLocaleDateString(undefined, {
+          month: 'long',
+          day: 'numeric',
+        });
+        result.push({ name, birthdayLabel, daysRemaining });
+      }
+    });
+
+    result.sort((a, b) => {
+      if (a.daysRemaining === b.daysRemaining) {
+        return a.name.localeCompare(b.name);
+      }
+      return a.daysRemaining - b.daysRemaining;
+    });
+
+    return result;
+  }, [projects]);
 
   useEffect(() => {
     const load = async () => {
@@ -178,6 +239,42 @@ const LandingPage: React.FC = () => {
             </motion.div>
           </div>
         </section>
+
+        {!loading && upcomingBirthdays.length > 0 && (
+          <section className="max-w-6xl mx-auto px-4 py-8 border-b border-slate-800/60">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-sm md:text-base font-semibold text-slate-50 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-royal" />
+                  Upcoming birthdays (next 7 days)
+                </h2>
+                <p className="text-[11px] md:text-xs text-slate-400">
+                  See which classmates have a birthday coming up within the week.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {upcomingBirthdays.map((b) => (
+                <div
+                  key={`${b.name}-${b.birthdayLabel}`}
+                  className="min-w-[220px] rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-xs md:text-sm flex flex-col gap-1"
+                >
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Classmate birthday</p>
+                  <p className="text-sm font-semibold text-slate-50 truncate">{b.name}</p>
+                  <p className="text-[11px] text-slate-400">{b.birthdayLabel}</p>
+                  <p className="mt-1 text-[11px] font-medium text-slate-200">
+                    {b.daysRemaining === 0
+                      ? 'Birthday is today!'
+                      : b.daysRemaining === 1
+                      ? 'In 1 day'
+                      : `In ${b.daysRemaining} days`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section id="projects" className="max-w-6xl mx-auto px-4 py-14 md:py-16">
           <div className="flex items-end justify-between gap-4 mb-8">

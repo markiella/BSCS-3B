@@ -31,6 +31,9 @@ const AdminStudentsPage: React.FC = () => {
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmMode, setConfirmMode] = useState<'reset' | 'delete' | null>(null);
+  const [confirmStudent, setConfirmStudent] = useState<StudentSummary | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -91,61 +94,68 @@ const AdminStudentsPage: React.FC = () => {
     );
   }, [filteredStudents]);
 
-  const handleResetPassword = async (student: StudentSummary) => {
-    if (
-      !window.confirm(
-        `Reset password for ${student.name || student.email}? This will generate a new temporary password and overwrite the old one.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setError(null);
-      setResetMessage(null);
-
-      const { data } = await api.post<{
-        id: string;
-        fullName: string;
-        email: string;
-        temporaryPassword: string;
-      }>(`/admin/students/${student.id}/reset-password`);
-
-      setResetMessage(
-        `Temporary password for ${data.email} is "${data.temporaryPassword}". Please send this to the student and ask them to log in and change it.`,
-      );
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to reset password';
-      setError(msg);
-    }
+  const handleResetPassword = (student: StudentSummary) => {
+    setConfirmStudent(student);
+    setConfirmMode('reset');
   };
 
-  const handleDeleteStudent = async (student: StudentSummary) => {
-    if (
-      !window.confirm(
-        `Delete account for ${student.name || student.email}? This will also delete all of their projects.`,
-      )
-    ) {
+  const handleDeleteStudent = (student: StudentSummary) => {
+    setConfirmStudent(student);
+    setConfirmMode('delete');
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmStudent || !confirmMode) return;
+
+    if (confirmMode === 'reset') {
+      try {
+        setConfirmLoading(true);
+        setError(null);
+        setResetMessage(null);
+        setDeleteMessage(null);
+
+        const { data } = await api.post<{
+          id: string;
+          fullName: string;
+          email: string;
+          temporaryPassword: string;
+        }>(`/admin/students/${confirmStudent.id}/reset-password`);
+
+        setResetMessage(
+          `Temporary password for ${data.email} is "${data.temporaryPassword}". Please send this to the student and ask them to log in and change it.`,
+        );
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || 'Failed to reset password';
+        setError(msg);
+      } finally {
+        setConfirmLoading(false);
+        setConfirmMode(null);
+        setConfirmStudent(null);
+      }
       return;
     }
 
     try {
+      setConfirmLoading(true);
       setError(null);
       setResetMessage(null);
       setDeleteMessage(null);
-      setDeletingId(student.id);
+      setDeletingId(confirmStudent.id);
 
-      await api.delete(`/admin/students/${student.id}`);
+      await api.delete(`/admin/students/${confirmStudent.id}`);
 
-      setStudents((prev) => prev.filter((s) => s.id !== student.id));
+      setStudents((prev) => prev.filter((s) => s.id !== confirmStudent.id));
       setDeleteMessage(
-        `Student account ${student.email} and their projects have been deleted from the compilation system.`,
+        `Student account ${confirmStudent.email} and their projects have been deleted from the compilation system.`,
       );
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to delete student';
       setError(msg);
     } finally {
       setDeletingId(null);
+      setConfirmLoading(false);
+      setConfirmMode(null);
+      setConfirmStudent(null);
     }
   };
 
@@ -232,63 +242,105 @@ const AdminStudentsPage: React.FC = () => {
           <span className="text-slate-500">Section · Projects · Approved · Pending · Rejected</span>
         </div>
 
-        <div className="divide-y divide-slate-800/80">
-          {filteredStudents.map((student: StudentSummary) => (
-            <motion.div
-              key={student.id}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15 }}
-              className="flex flex-col gap-2 px-4 py-3 text-xs text-slate-200 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-medium text-slate-50">{student.name}</p>
-                <p className="text-[11px] text-slate-400">{student.email}</p>
-              </div>
+        <div className="max-h-[480px] overflow-y-auto">
+          <div className="divide-y divide-slate-800/80">
+            {filteredStudents.map((student: StudentSummary) => (
+              <motion.div
+                key={student.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col gap-2 px-4 py-3 text-xs text-slate-200 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-medium text-slate-50">{student.name}</p>
+                  <p className="text-[11px] text-slate-400">{student.email}</p>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
-                <span className="rounded-full bg-slate-900 px-2 py-1 text-slate-200">
-                  {student.section}
-                </span>
-                <span className="rounded-full bg-slate-900 px-2 py-1">
-                  {student.projectsCount} project(s)
-                </span>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-emerald-300">
-                  {student.approved} approved
-                </span>
-                <span className="rounded-full bg-amber-500/10 px-2 py-1 text-amber-200">
-                  {student.pending} pending
-                </span>
-                <span className="rounded-full bg-rose-500/10 px-2 py-1 text-rose-300">
-                  {student.rejected} rejected
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleResetPassword(student)}
-                  disabled={deletingId === student.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-1 text-[11px] text-slate-200 ring-1 ring-inset ring-slate-700/80 hover:bg-slate-800 hover:text-emerald-300 hover:ring-emerald-500/60 disabled:opacity-60"
-                >
-                  <KeyRound className="h-3 w-3" /> Reset password
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteStudent(student)}
-                  disabled={deletingId === student.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-rose-950 px-2 py-1 text-[11px] text-rose-200 ring-1 ring-inset ring-rose-700/80 hover:bg-rose-900 hover:text-rose-50 hover:ring-rose-500/70 disabled:opacity-60"
-                >
-                  <Trash2 className="h-3 w-3" /> Delete
-                </button>
-              </div>
-            </motion.div>
-          ))}
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                  <span className="rounded-full bg-slate-900 px-2 py-1 text-slate-200">
+                    {student.section}
+                  </span>
+                  <span className="rounded-full bg-slate-900 px-2 py-1">
+                    {student.projectsCount} project(s)
+                  </span>
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-emerald-300">
+                    {student.approved} approved
+                  </span>
+                  <span className="rounded-full bg-amber-500/10 px-2 py-1 text-amber-200">
+                    {student.pending} pending
+                  </span>
+                  <span className="rounded-full bg-rose-500/10 px-2 py-1 text-rose-300">
+                    {student.rejected} rejected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleResetPassword(student)}
+                    disabled={deletingId === student.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-1 text-[11px] text-slate-200 ring-1 ring-inset ring-slate-700/80 hover:bg-slate-800 hover:text-emerald-300 hover:ring-emerald-500/60 disabled:opacity-60"
+                  >
+                    <KeyRound className="h-3 w-3" /> Reset password
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteStudent(student)}
+                    disabled={deletingId === student.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-rose-950 px-2 py-1 text-[11px] text-rose-200 ring-1 ring-inset ring-rose-700/80 hover:bg-rose-900 hover:text-rose-50 hover:ring-rose-500/70 disabled:opacity-60"
+                  >
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                </div>
+              </motion.div>
+            ))}
 
-          {filteredStudents.length === 0 && (
-            <div className="px-6 py-10 text-center text-xs text-slate-400">
-              No students match your filters.
-            </div>
-          )}
+            {filteredStudents.length === 0 && (
+              <div className="px-6 py-10 text-center text-xs text-slate-400">
+                No students match your filters.
+              </div>
+            )}
+          </div>
         </div>
       </div>
+      {confirmMode && confirmStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950/95 p-4 md:p-5 text-xs md:text-sm space-y-3">
+            <p className="text-sm md:text-base font-semibold text-slate-50">
+              {confirmMode === 'reset' ? 'Reset student password' : 'Delete student account'}
+            </p>
+            <p className="text-slate-400">
+              {confirmMode === 'reset'
+                ? `Generate a new temporary password for ${confirmStudent.name || confirmStudent.email}. This will overwrite their current password.`
+                : `Delete the account for ${confirmStudent.name || confirmStudent.email}. This will also remove their projects from the compilation.`}
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={confirmLoading}
+                onClick={() => {
+                  if (confirmLoading) return;
+                  setConfirmMode(null);
+                  setConfirmStudent(null);
+                }}
+                className="px-3 py-1.5 rounded-full text-xs md:text-sm text-slate-200 border border-slate-700/80 hover:bg-slate-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                disabled={confirmLoading}
+                className="px-3 py-1.5 rounded-full text-xs md:text-sm bg-emerald-500 text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
+              >
+                {confirmLoading
+                  ? 'Processing...'
+                  : confirmMode === 'reset'
+                  ? 'Reset password'
+                  : 'Delete account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

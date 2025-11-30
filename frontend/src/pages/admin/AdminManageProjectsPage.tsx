@@ -167,7 +167,7 @@ const AdminManageProjectsPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 max-h-[480px] overflow-y-auto pr-1">
         {filteredProjects.map((project: AdminProjectSummary) => (
           <motion.div
             key={project.id}

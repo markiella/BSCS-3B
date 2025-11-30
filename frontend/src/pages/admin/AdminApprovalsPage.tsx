@@ -31,6 +31,8 @@ const AdminApprovalsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [feedbackTarget, setFeedbackTarget] = useState<{ id: string; status: 'approved' | 'rejected' } | null>(null);
+  const [feedbackDraft, setFeedbackDraft] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -79,14 +81,7 @@ const AdminApprovalsPage: React.FC = () => {
     }
   };
 
-  const handleDecision = async (submissionId: string, status: 'approved' | 'rejected') => {
-    const feedbackPrompt =
-      status === 'approved'
-        ? 'Optional feedback for the student (leave blank to skip):'
-        : 'Optional feedback / reason for rejection (leave blank to skip):';
-
-    const feedback = window.prompt(feedbackPrompt) ?? '';
-
+  const handleDecision = async (submissionId: string, status: 'approved' | 'rejected', feedback: string) => {
     setUpdatingId(submissionId);
     setError(null);
     setSuccess(null);
@@ -105,6 +100,18 @@ const AdminApprovalsPage: React.FC = () => {
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  const openFeedbackModal = (submissionId: string, status: 'approved' | 'rejected') => {
+    setFeedbackTarget({ id: submissionId, status });
+    setFeedbackDraft('');
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackTarget) return;
+    await handleDecision(feedbackTarget.id, feedbackTarget.status, feedbackDraft.trim());
+    setFeedbackTarget(null);
+    setFeedbackDraft('');
   };
 
   return (
@@ -191,7 +198,7 @@ const AdminApprovalsPage: React.FC = () => {
                 <button
                   type="button"
                   disabled={updatingId === submission._id}
-                  onClick={() => handleDecision(submission._id, 'approved')}
+                  onClick={() => openFeedbackModal(submission._id, 'approved')}
                   className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-emerald-950 shadow-sm shadow-emerald-500/40 transition hover:bg-emerald-400"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
@@ -200,7 +207,7 @@ const AdminApprovalsPage: React.FC = () => {
                 <button
                   type="button"
                   disabled={updatingId === submission._id}
-                  onClick={() => handleDecision(submission._id, 'rejected')}
+                  onClick={() => openFeedbackModal(submission._id, 'rejected')}
                   className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 ring-1 ring-inset ring-slate-700/80 transition hover:bg-slate-800 hover:text-rose-300 hover:ring-rose-500/60 disabled:opacity-70"
                 >
                   <XCircle className="h-3.5 w-3.5" />
@@ -222,6 +229,54 @@ const AdminApprovalsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {feedbackTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950/95 p-4 md:p-5 text-xs md:text-sm space-y-3">
+            <p className="text-sm md:text-base font-semibold text-slate-50">
+              {feedbackTarget.status === 'approved' ? 'Approve project' : 'Request revisions'}
+            </p>
+            <p className="text-slate-400">
+              {feedbackTarget.status === 'approved'
+                ? 'Optional feedback for the student (leave blank to skip).'
+                : 'Optional feedback / reason for rejection (leave blank to skip).'}
+            </p>
+            <textarea
+              rows={3}
+              value={feedbackDraft}
+              onChange={(e) => setFeedbackDraft(e.target.value)}
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-xs md:text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/70"
+              placeholder={
+                feedbackTarget.status === 'approved'
+                  ? 'Great job! Your project is approved for compilation.'
+                  : 'Please update the design, fix responsiveness issues, or address missing content.'
+              }
+            />
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={updatingId === feedbackTarget.id}
+                onClick={() => {
+                  if (updatingId === feedbackTarget.id) return;
+                  setFeedbackTarget(null);
+                  setFeedbackDraft('');
+                }}
+                className="px-3 py-1.5 rounded-full text-xs md:text-sm text-slate-200 border border-slate-700/80 hover:bg-slate-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={updatingId === feedbackTarget.id}
+                onClick={handleSubmitFeedback}
+                className="px-3 py-1.5 rounded-full text-xs md:text-sm bg-emerald-500 text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
+              >
+                {feedbackTarget.status === 'approved' ? 'Confirm approval' : 'Send request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
