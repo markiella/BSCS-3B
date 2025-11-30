@@ -19,7 +19,15 @@ const RegisterPage: React.FC = () => {
     try {
       await register(fullName, email, password);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Registration failed. Please check your details.';
+      let msg = err?.response?.data?.message || 'Registration failed. Please check your details.';
+
+      if (err?.response?.status === 400 && typeof err?.response?.data?.message === 'string') {
+        const raw = err.response.data.message.toLowerCase();
+        if (raw.includes('already') && raw.includes('email')) {
+          msg = 'This email is already in use. Please login instead.';
+        }
+      }
+
       setError(msg);
       setLoading(false);
     }

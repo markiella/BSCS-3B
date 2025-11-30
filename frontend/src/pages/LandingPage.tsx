@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Facebook, Github, Globe2, Instagram, LayoutGrid, LogIn, Sparkles, User, UserPlus } from 'lucide-react';
+import {
+  ArrowRight,
+  Facebook,
+  Github,
+  Globe2,
+  Instagram,
+  LayoutGrid,
+  LogIn,
+  Search,
+  Sparkles,
+  User,
+  UserPlus,
+} from 'lucide-react';
 import { api } from '../utils/api';
 
 interface LandingProject {
@@ -28,6 +40,7 @@ const LandingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<LandingProject | null>(null);
   const [imagePreview, setImagePreview] = useState<{ url: string; alt: string } | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +55,15 @@ const LandingPage: React.FC = () => {
     };
     load();
   }, []);
+
+  const filteredProjects = projects.filter((project) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    const title = project.title?.toLowerCase() || '';
+    const description = project.description?.toLowerCase() || '';
+    const author = project.user?.fullName?.toLowerCase() || '';
+    return title.includes(q) || description.includes(q) || author.includes(q);
+  });
 
   return (
     <div className="bg-slate-950 text-slate-50 min-h-screen flex flex-col">
@@ -167,6 +189,19 @@ const LandingPage: React.FC = () => {
                 Curated, instructor-approved web applications from BSCS 3B.
               </p>
             </div>
+
+            <div className="w-full max-w-xs">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by project title or student"
+                  className="w-full rounded-full border border-slate-800 bg-slate-950 px-9 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:border-royal/70 focus:outline-none focus:ring-2 focus:ring-royal/40"
+                />
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -178,9 +213,14 @@ const LandingPage: React.FC = () => {
               <p>No approved projects yet.</p>
               <p className="text-xs mt-1">Once the instructor approves submissions, they will appear here.</p>
             </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="h-32 flex flex-col items-center justify-center text-sm text-slate-400 border border-dashed border-slate-800 rounded-2xl bg-slate-900/40">
+              <p>No projects match your search.</p>
+              <p className="text-xs mt-1">Try searching by project title or student name.</p>
+            </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {projects.map((project, idx) => (
+              {filteredProjects.map((project, idx) => (
                 <motion.article
                   key={project._id}
                   initial={{ opacity: 0, y: 18 }}

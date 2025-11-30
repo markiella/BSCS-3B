@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Search, Filter, KeyRound } from 'lucide-react';
+import { Users, Search, Filter, KeyRound, Trash2 } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface StudentSummary {
@@ -29,12 +29,15 @@ const AdminStudentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError(null);
       setResetMessage(null);
+      setDeleteMessage(null);
       try {
         const { data } = await api.get<StudentSummary[]>('/admin/students');
 
@@ -117,6 +120,35 @@ const AdminStudentsPage: React.FC = () => {
     }
   };
 
+  const handleDeleteStudent = async (student: StudentSummary) => {
+    if (
+      !window.confirm(
+        `Delete account for ${student.name || student.email}? This will also delete all of their projects.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setResetMessage(null);
+      setDeleteMessage(null);
+      setDeletingId(student.id);
+
+      await api.delete(`/admin/students/${student.id}`);
+
+      setStudents((prev) => prev.filter((s) => s.id !== student.id));
+      setDeleteMessage(
+        `Student account ${student.email} and their projects have been deleted from the compilation system.`,
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to delete student';
+      setError(msg);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -168,6 +200,11 @@ const AdminStudentsPage: React.FC = () => {
       {resetMessage && !error && (
         <div className="rounded-xl border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-[11px] md:text-xs text-emerald-300">
           {resetMessage}
+        </div>
+      )}
+      {deleteMessage && !error && (
+        <div className="rounded-xl border border-rose-800/60 bg-rose-950/40 px-3 py-2 text-[11px] md:text-xs text-rose-200">
+          {deleteMessage}
         </div>
       )}
 
@@ -228,9 +265,18 @@ const AdminStudentsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleResetPassword(student)}
-                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-1 text-[11px] text-slate-200 ring-1 ring-inset ring-slate-700/80 hover:bg-slate-800 hover:text-emerald-300 hover:ring-emerald-500/60"
+                  disabled={deletingId === student.id}
+                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-1 text-[11px] text-slate-200 ring-1 ring-inset ring-slate-700/80 hover:bg-slate-800 hover:text-emerald-300 hover:ring-emerald-500/60 disabled:opacity-60"
                 >
                   <KeyRound className="h-3 w-3" /> Reset password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteStudent(student)}
+                  disabled={deletingId === student.id}
+                  className="inline-flex items-center gap-1 rounded-full bg-rose-950 px-2 py-1 text-[11px] text-rose-200 ring-1 ring-inset ring-rose-700/80 hover:bg-rose-900 hover:text-rose-50 hover:ring-rose-500/70 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3 w-3" /> Delete
                 </button>
               </div>
             </motion.div>
